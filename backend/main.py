@@ -55,9 +55,15 @@ def _save_registry(registry: dict) -> None:
     REGISTRY_PATH.write_text(json.dumps(registry, indent=2))
 
 
+class Turn(BaseModel):
+    role: str
+    content: str
+
+
 class AskRequest(BaseModel):
     question: str
     document_id: str
+    history: list[Turn] = []
 
 
 @app.get("/api/health")
@@ -125,7 +131,8 @@ def ask(req: AskRequest) -> dict:
         raise HTTPException(status_code=404, detail="Document not found.")
 
     try:
-        return rag_engine.ask_question(req.question, req.document_id)
+        history = [turn.model_dump() for turn in req.history]
+        return rag_engine.ask_question(req.question, req.document_id, history)
     except RuntimeError as exc:
         # Missing/invalid Groq API key.
         raise HTTPException(status_code=503, detail=str(exc)) from exc
