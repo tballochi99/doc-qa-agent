@@ -7,7 +7,7 @@ function Message({ message }) {
   return (
     <div className={`flex flex-col gap-1.5 animate-fade-up ${isUser ? "items-end" : "items-start"}`}>
       <span className="text-[11px] font-mono text-neutral-600 px-1">
-        {isUser ? "you" : "agent"}
+        {isUser ? "you" : "greg"}
       </span>
       <div
         className={`max-w-[80%] rounded-xl px-4 py-2.5 text-sm leading-relaxed
@@ -79,7 +79,7 @@ export default function ChatInterface({ activeDoc, messages, onAsk, loading }) {
 
         {loading && (
           <div className="flex flex-col gap-1.5 items-start animate-fade-up">
-            <span className="text-[11px] font-mono text-neutral-600 px-1">agent</span>
+            <span className="text-[11px] font-mono text-neutral-600 px-1">greg</span>
             <div className="border border-border bg-surface rounded-xl px-4 py-3.5">
               <div className="flex gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-neutral-500 animate-bounce [animation-delay:-0.3s]" />

@@ -9,7 +9,7 @@ export default function Header() {
           Document Q&amp;A
         </span>
         <span className="text-neutral-700">/</span>
-        <span className="text-sm text-neutral-400">Agent</span>
+        <span className="text-sm text-neutral-400">Greg</span>
       </div>
 
       <div className="flex items-center gap-3 text-xs font-mono text-accent">

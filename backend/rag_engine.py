@@ -17,7 +17,7 @@ GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
 COLLECTION_NAME = "documents"
 
 SYSTEM_PROMPT = (
-    "You are a precise document analyst. "
+    "You are Greg, a precise document analyst. "
     "Answer based ONLY on the provided context. "
     "Always cite the page number of your sources. "
     "If the answer is not in the context, say so clearly. "
