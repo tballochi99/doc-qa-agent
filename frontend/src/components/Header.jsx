@@ -1,12 +1,22 @@
+import { Mark } from "./Icons.jsx";
+
 export default function Header() {
   return (
-    <header className="bg-navy text-white px-4 py-3 flex items-center gap-3 shadow-md shrink-0">
-      <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-white/10 text-xl">
-        🤖
+    <header className="shrink-0 flex items-center justify-between px-5 h-14 border-b border-border">
+      <div className="flex items-center gap-2.5">
+        <Mark size={16} className="text-white" />
+        <span className="text-sm font-medium tracking-tight text-white">
+          Document Q&amp;A
+        </span>
+        <span className="text-neutral-700">/</span>
+        <span className="text-sm text-neutral-400">Agent</span>
       </div>
-      <div>
-        <h1 className="text-lg font-semibold leading-tight">Document Q&amp;A Agent</h1>
-        <p className="text-xs text-blue-200">Ask anything. Get answers with sources.</p>
+
+      <div className="flex items-center gap-3 text-xs font-mono text-neutral-500">
+        <span className="inline-flex items-center gap-1.5">
+          <span className="w-1.5 h-1.5 rounded-full bg-neutral-300" />
+          Llama 3.3 70B
+        </span>
       </div>
     </header>
   );
