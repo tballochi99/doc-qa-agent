@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+
+# Environment
+.env
+backend/.env
+
+# Vector DB persistence
+chroma_db/
+backend/chroma_db/
+
+# Node
+node_modules/
+frontend/dist/
+frontend/node_modules/
+
+# Misc
+.DS_Store
+*.log
+.idea/
+.vscode/

@@ -1,0 +1,33 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: "Inter", system-ui, sans-serif;
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+/* Yellow highlight applied to source passages. */
+.source-highlight {
+  background: linear-gradient(transparent 55%, #fde68a 55%);
+}
+
+/* Custom scrollbar for the chat and source panels. */
+.scroll-area::-webkit-scrollbar {
+  width: 8px;
+}
+.scroll-area::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+.scroll-area::-webkit-scrollbar-track {
+  background: transparent;
+}
