@@ -20,8 +20,22 @@ SYSTEM_PROMPT = (
     "You are a precise document analyst. "
     "Answer based ONLY on the provided context. "
     "Always cite the page number of your sources. "
-    "If the answer is not in the context, say so clearly."
+    "If the answer is not in the context, say so clearly. "
+    "Reply in the same language as the user's latest question."
 )
+
+# Used to turn a follow-up (e.g. "in French?", "summarize that") into a
+# standalone search query, so retrieval works on conversational turns.
+CONDENSE_PROMPT = (
+    "Given the conversation so far and a follow-up message, rewrite the "
+    "follow-up as a standalone, self-contained search query in the language "
+    "of the document. If the follow-up only changes the form of the answer "
+    "(translation, summarize, shorter…) and not the topic, reuse the topic "
+    "of the previous question. Reply with ONLY the rewritten query, nothing else."
+)
+
+# How many recent turns of history to keep in context.
+MAX_HISTORY_TURNS = 6
 
 
 @lru_cache(maxsize=1)
@@ -79,15 +93,62 @@ def process_document(file_path: str, document_id: str) -> dict:
     return {"chunks_count": len(chunks), "pages": pages}
 
 
-def ask_question(question: str, document_id: str, n_results: int = 5) -> dict:
+def _normalize_history(history: list[dict] | None) -> list[dict]:
+    """Keep only the recent valid {role, content} turns."""
+    if not history:
+        return []
+    clean = [
+        {"role": h["role"], "content": h["content"]}
+        for h in history
+        if h.get("role") in ("user", "assistant") and h.get("content")
+    ]
+    return clean[-MAX_HISTORY_TURNS:]
+
+
+def _condense_question(question: str, history: list[dict]) -> str:
+    """Rewrite a follow-up into a standalone query using the conversation.
+
+    No history → return the question unchanged (and skip the extra call).
+    """
+    if not history:
+        return question
+    convo = "\n".join(f"{h['role']}: {h['content']}" for h in history)
+    try:
+        completion = _get_groq().chat.completions.create(
+            model=GROQ_MODEL,
+            messages=[
+                {"role": "system", "content": CONDENSE_PROMPT},
+                {"role": "user", "content": f"Conversation:\n{convo}\n\nFollow-up: {question}"},
+            ],
+            temperature=0.0,
+        )
+        rewritten = (completion.choices[0].message.content or "").strip()
+        return rewritten or question
+    except Exception:
+        # If reformulation fails, fall back to the raw question.
+        return question
+
+
+def ask_question(
+    question: str,
+    document_id: str,
+    history: list[dict] | None = None,
+    n_results: int = 5,
+) -> dict:
     """Retrieve the most relevant chunks and generate a grounded answer.
+
+    History-aware: follow-up turns are condensed into a standalone query
+    for retrieval, and the recent conversation is given to the LLM so it
+    can resolve references ("in French?", "summarize that"…).
 
     Returns the answer plus the source passages (text, page, score).
     """
     collection = _get_collection()
+    history = _normalize_history(history)
+    search_query = _condense_question(question, history)
 
     results = collection.query(
-        query_texts=[question],
+        query_texts=[search_query],
         n_results=n_results,
         where={"document_id": document_id},
     )
@@ -118,13 +179,15 @@ def ask_question(question: str, document_id: str, n_results: int = 5) -> dict:
         "Answer the question using only the context above and cite the page numbers."
     )
 
+    # System prompt + recent conversation + the grounded current turn.
+    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+    messages.extend(history)
+    messages.append({"role": "user", "content": user_prompt})
+
     client = _get_groq()
     completion = client.chat.completions.create(
         model=GROQ_MODEL,
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": user_prompt},
-        ],
+        messages=messages,
         temperature=0.2,
     )
     answer = completion.choices[0].message.content
