@@ -75,11 +75,16 @@ export function AlertIcon({ size = 16, className = "" }) {
   );
 }
 
-// Product wordmark glyph: a simple triangle, drawn (not an emoji).
+// Product wordmark glyph: an original geometric mark — a 2x2 grid that
+// alternates squares and circles with rotational symmetry. Distinct from
+// Vercel's triangle. Monochrome via currentColor.
 export function Mark({ size = 18, className = "" }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" className={className}>
-      <path d="M12 4 22 20H2L12 4Z" fill="currentColor" />
+    <svg width={size} height={size} viewBox="0 0 24 24" className={className} fill="currentColor">
+      <rect x="2.5" y="2.5" width="8.5" height="8.5" rx="2.5" />
+      <circle cx="17.25" cy="6.75" r="4.25" />
+      <circle cx="6.75" cy="17.25" r="4.25" />
+      <rect x="13" y="13" width="8.5" height="8.5" rx="2.5" />
     </svg>
   );
 }
