@@ -17,10 +17,11 @@ export async function uploadDocument(file, onProgress) {
   return data;
 }
 
-export async function askQuestion(question, documentId) {
+export async function askQuestion(question, documentId, history = []) {
   const { data } = await client.post("/api/ask", {
     question,
     document_id: documentId,
+    history,
   });
   return data;
 }

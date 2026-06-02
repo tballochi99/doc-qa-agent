@@ -79,9 +79,11 @@ export default function App() {
   const handleAsk = async (question) => {
     setError("");
     setAsking(true);
+    // Snapshot the prior turns as conversation history for the backend.
+    const history = messages.map((m) => ({ role: m.role, content: m.content }));
     setMessages((prev) => [...prev, { role: "user", content: question }]);
     try {
-      const res = await askQuestion(question, activeId);
+      const res = await askQuestion(question, activeId, history);
       setMessages((prev) => [...prev, { role: "assistant", content: res.answer }]);
       setSources(res.sources || []);
       if (res.sources?.length) setShowSources(true);
