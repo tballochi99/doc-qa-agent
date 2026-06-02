@@ -5,15 +5,24 @@ export default {
   content: ["./index.html", "./src/**/*.{js,jsx}"],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ["Geist", "system-ui", "sans-serif"],
+        mono: ["Geist Mono", "ui-monospace", "monospace"],
+      },
       colors: {
-        navy: {
-          DEFAULT: "#0B2C4D",
-          light: "#143d66",
-          dark: "#082238",
+        // Vercel-style monochrome scale: pure black base, hairline borders.
+        bg: "#000000",
+        surface: "#0a0a0a",
+        border: "#1f1f1f",
+      },
+      keyframes: {
+        "fade-up": {
+          "0%": { opacity: "0", transform: "translateY(4px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
         },
       },
-      fontFamily: {
-        sans: ["Inter", "system-ui", "sans-serif"],
+      animation: {
+        "fade-up": "fade-up 0.25s ease-out both",
       },
     },
   },
