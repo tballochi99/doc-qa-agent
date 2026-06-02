@@ -3,6 +3,7 @@ import Header from "./components/Header.jsx";
 import UploadZone from "./components/UploadZone.jsx";
 import ChatInterface from "./components/ChatInterface.jsx";
 import SourceCard from "./components/SourceCard.jsx";
+import { FileIcon, TrashIcon, CloseIcon, AlertIcon } from "./components/Icons.jsx";
 import {
   uploadDocument,
   askQuestion,
@@ -86,79 +87,89 @@ export default function App() {
       if (res.sources?.length) setShowSources(true);
     } catch (err) {
       const detail = err.response?.data?.detail || "Failed to get an answer.";
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: `⚠️ ${detail}` },
-      ]);
+      setMessages((prev) => [...prev, { role: "assistant", content: detail }]);
     } finally {
       setAsking(false);
     }
   };
 
   return (
-    <div className="flex flex-col h-screen">
+    <div className="flex flex-col h-screen bg-bg text-neutral-200">
       <Header />
 
       {error && (
-        <div className="bg-red-50 border-b border-red-200 text-red-700 text-sm px-4 py-2 flex justify-between">
-          <span>{error}</span>
-          <button onClick={() => setError("")} className="font-bold">
-            ✕
+        <div className="shrink-0 flex items-center justify-between gap-2 px-5 py-2.5 border-b border-border bg-surface text-sm text-neutral-300 animate-fade-up">
+          <span className="flex items-center gap-2">
+            <AlertIcon size={14} className="text-neutral-400" />
+            {error}
+          </span>
+          <button
+            onClick={() => setError("")}
+            className="text-neutral-500 hover:text-white transition"
+            aria-label="Dismiss"
+          >
+            <CloseIcon size={14} />
           </button>
         </div>
       )}
 
       <div className="flex flex-1 overflow-hidden flex-col md:flex-row">
         {/* ZONE 1 — Sidebar */}
-        <aside className="w-full md:w-[30%] md:max-w-sm border-r border-slate-200 bg-slate-50 flex flex-col p-4 gap-4 overflow-y-auto scroll-area">
+        <aside className="w-full md:w-[26%] md:max-w-xs border-b md:border-b-0 md:border-r border-border flex flex-col p-4 gap-5 overflow-y-auto scroll-area">
           <UploadZone onUpload={handleUpload} uploading={uploading} progress={progress} />
 
-          <div>
-            <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">
-              Documents ({documents.length})
+          <div className="flex-1">
+            <h2 className="text-[11px] font-mono uppercase tracking-widest text-neutral-600 mb-3">
+              Documents · {documents.length}
             </h2>
             {documents.length === 0 ? (
-              <p className="text-sm text-slate-400">No documents yet.</p>
+              <p className="text-sm text-neutral-600">No documents yet.</p>
             ) : (
-              <ul className="space-y-1.5">
-                {documents.map((doc) => (
-                  <li
-                    key={doc.id}
-                    onClick={() => handleSelect(doc.id)}
-                    className={`group flex items-center justify-between gap-2 rounded-lg px-3 py-2 cursor-pointer text-sm transition
-                      ${
-                        doc.id === activeId
-                          ? "bg-navy text-white"
-                          : "bg-white border border-slate-200 hover:border-navy/40"
-                      }`}
-                  >
-                    <span className="truncate">
-                      📄 {doc.filename}
-                      <span className={`ml-1 text-xs ${doc.id === activeId ? "text-blue-200" : "text-slate-400"}`}>
-                        · {doc.pages}p
-                      </span>
-                    </span>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDelete(doc.id);
-                      }}
-                      className={`opacity-0 group-hover:opacity-100 transition shrink-0 ${
-                        doc.id === activeId ? "text-blue-200 hover:text-white" : "text-slate-400 hover:text-red-500"
-                      }`}
-                      title="Delete document"
+              <ul className="space-y-1">
+                {documents.map((doc) => {
+                  const active = doc.id === activeId;
+                  return (
+                    <li
+                      key={doc.id}
+                      onClick={() => handleSelect(doc.id)}
+                      className={`group flex items-center justify-between gap-2 rounded-md px-2.5 py-2 cursor-pointer text-sm transition-colors border
+                        ${
+                          active
+                            ? "bg-neutral-900 border-neutral-700 text-white"
+                            : "border-transparent text-neutral-400 hover:bg-neutral-900/60 hover:text-neutral-200"
+                        }`}
                     >
-                      🗑
-                    </button>
-                  </li>
-                ))}
+                      <span className="truncate flex items-center gap-2 min-w-0">
+                        <FileIcon size={14} className="shrink-0 text-neutral-500" />
+                        <span className="truncate">{doc.filename}</span>
+                        <span className="text-[10px] font-mono text-neutral-600 shrink-0">
+                          {doc.pages}p
+                        </span>
+                      </span>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(doc.id);
+                        }}
+                        className="opacity-0 group-hover:opacity-100 transition shrink-0 text-neutral-600 hover:text-white"
+                        aria-label="Delete document"
+                      >
+                        <TrashIcon size={14} />
+                      </button>
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </div>
+
+          <p className="text-[10px] font-mono text-neutral-700 pt-3 border-t border-border">
+            built by Timoté Ballochi
+          </p>
         </aside>
 
         {/* ZONE 2 — Chat */}
-        <main className="flex-1 flex flex-col bg-slate-100 min-h-0">
+        <main className="flex-1 flex flex-col min-h-0">
           <ChatInterface
             activeDoc={activeDoc}
             messages={messages}
@@ -169,18 +180,20 @@ export default function App() {
 
         {/* ZONE 3 — Sources panel */}
         {showSources && sources.length > 0 && (
-          <aside className="w-full md:w-[30%] md:max-w-sm border-l border-slate-200 bg-slate-50 flex flex-col overflow-hidden">
-            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 bg-white shrink-0">
-              <h2 className="text-sm font-semibold text-navy">Sources ({sources.length})</h2>
+          <aside className="w-full md:w-[30%] md:max-w-sm border-t md:border-t-0 md:border-l border-border flex flex-col overflow-hidden animate-fade-up">
+            <div className="flex items-center justify-between px-4 h-12 border-b border-border shrink-0">
+              <h2 className="text-[11px] font-mono uppercase tracking-widest text-neutral-500">
+                Sources · {sources.length}
+              </h2>
               <button
                 onClick={() => setShowSources(false)}
-                className="text-slate-400 hover:text-slate-700"
-                title="Close"
+                className="text-neutral-600 hover:text-white transition"
+                aria-label="Close sources"
               >
-                ✕
+                <CloseIcon size={14} />
               </button>
             </div>
-            <div className="scroll-area flex-1 overflow-y-auto p-3 space-y-3">
+            <div className="scroll-area flex-1 overflow-y-auto p-3 space-y-2.5">
               {sources.map((s, i) => (
                 <SourceCard key={i} source={s} index={i} />
               ))}
