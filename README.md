@@ -107,7 +107,7 @@ All backend configuration lives in `backend/.env` (see `.env.example`):
 | `CHROMA_PERSIST_PATH` | `./chroma_db` | Vector DB storage path |
 | `MAX_FILE_SIZE_MB` | `10` | Max upload size |
 | `GROQ_MODEL` | `llama-3.3-70b-versatile` | Groq model |
-| `EMBEDDING_MODEL` | `all-MiniLM-L6-v2` | Sentence-Transformers model |
+| `EMBEDDING_MODEL` | `paraphrase-multilingual-MiniLM-L12-v2` | Sentence-Transformers model (multilingual) |
 | `ALLOWED_ORIGINS` | `http://localhost:3000` | CORS allowed origins |
 
 ## Use Cases
