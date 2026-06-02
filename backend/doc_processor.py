@@ -35,7 +35,49 @@ def extract_pages(file_path: str) -> list[str]:
     for page in reader.pages:
         text = page.extract_text() or ""
         pages.append(text.strip())
-    return pages
+    return _strip_repeated_lines(pages)
+
+
+# A line repeated on more than this fraction of pages is treated as a
+# header/footer (page numbers, legal footers, Siret, "Docusign Envelope ID"…)
+# and removed so it doesn't pollute chunks and dilute retrieval.
+_BOILERPLATE_PAGE_FRACTION = 0.5
+
+
+def _strip_repeated_lines(pages: list[str]) -> list[str]:
+    """Drop lines that repeat across most pages (recurring headers/footers).
+
+    Only kicks in for multi-page documents, where boilerplate is detectable.
+    """
+    if len(pages) < 3:
+        return pages
+
+    # Count, per normalized line, how many distinct pages it appears on.
+    page_count: dict[str, int] = {}
+    for page in pages:
+        seen_here = set()
+        for raw in page.splitlines():
+            line = raw.strip()
+            if len(line) < 8:  # keep short lines; too generic to judge
+                continue
+            if line not in seen_here:
+                seen_here.add(line)
+                page_count[line] = page_count.get(line, 0) + 1
+
+    threshold = max(2, int(len(pages) * _BOILERPLATE_PAGE_FRACTION))
+    boilerplate = {line for line, count in page_count.items() if count >= threshold}
+    if not boilerplate:
+        return pages
+
+    cleaned: list[str] = []
+    for page in pages:
+        kept = [
+            raw
+            for raw in page.splitlines()
+            if raw.strip() not in boilerplate
+        ]
+        cleaned.append("\n".join(kept).strip())
+    return cleaned
 
 
 def chunk_document(file_path: str) -> tuple[list[Chunk], int]:
