@@ -1,4 +1,4 @@
-# Document Q&A Agent 🤖
+# Document Q&A Agent 
 
 > Upload any document and ask questions in natural language.
 > Powered by RAG (Retrieval Augmented Generation) with Groq LLM.
@@ -119,10 +119,5 @@ All backend configuration lives in `backend/.env` (see `.env.example`):
 
 ## Author
 
-Timoté Ballochi — Master Data & AI @ Epitech
-AI Product Owner Apprentice @ CMA CGM
-Portfolio: <https://tbal.vercel.app>
+Timoté Ballochi
 GitHub: <https://github.com/tballochi99>
-
----
-*Ask anything. Get answers with sources.*
