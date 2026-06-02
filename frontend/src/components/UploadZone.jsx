@@ -1,5 +1,6 @@
 import { useCallback } from "react";
 import { useDropzone } from "react-dropzone";
+import { UploadIcon } from "./Icons.jsx";
 
 export default function UploadZone({ onUpload, uploading, progress }) {
   const onDrop = useCallback(
@@ -19,29 +20,34 @@ export default function UploadZone({ onUpload, uploading, progress }) {
   return (
     <div
       {...getRootProps()}
-      className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition
-        ${isDragActive ? "border-navy bg-blue-50" : "border-slate-300 bg-white hover:border-navy/60"}
-        ${uploading ? "opacity-70 cursor-wait" : ""}`}
+      className={`rounded-lg border border-dashed p-6 text-center cursor-pointer transition-colors
+        ${isDragActive ? "border-neutral-500 bg-neutral-900" : "border-border hover:border-neutral-700"}
+        ${uploading ? "cursor-wait" : ""}`}
     >
       <input {...getInputProps()} />
       {uploading ? (
-        <div className="space-y-2">
-          <div className="animate-spin mx-auto w-6 h-6 border-2 border-navy border-t-transparent rounded-full" />
-          <p className="text-sm text-slate-600">Indexing document… {progress}%</p>
-          <div className="w-full bg-slate-200 rounded-full h-1.5">
+        <div className="space-y-3">
+          <div className="mx-auto w-5 h-5 border-2 border-neutral-700 border-t-white rounded-full animate-spin" />
+          <p className="text-sm text-neutral-300">Indexing… {progress}%</p>
+          <div className="w-full bg-neutral-900 rounded-full h-1 overflow-hidden">
             <div
-              className="bg-navy h-1.5 rounded-full transition-all"
+              className="h-1 rounded-full bg-white transition-all duration-300"
               style={{ width: `${progress}%` }}
             />
           </div>
+          <p className="text-[11px] font-mono text-neutral-600">
+            extract · chunk · embed · store
+          </p>
         </div>
       ) : (
         <>
-          <div className="text-3xl mb-1">📄</div>
-          <p className="text-sm font-medium text-navy">
-            {isDragActive ? "Drop your PDF here" : "Drag & drop a PDF"}
+          <UploadIcon size={20} className="mx-auto mb-2.5 text-neutral-500" />
+          <p className="text-sm text-neutral-200">
+            {isDragActive ? "Drop to upload" : "Drag & drop a PDF"}
           </p>
-          <p className="text-xs text-slate-400 mt-1">or click to browse · max 10MB</p>
+          <p className="text-[11px] font-mono text-neutral-600 mt-1">
+            or click to browse · max 10MB
+          </p>
         </>
       )}
     </div>
