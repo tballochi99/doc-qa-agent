@@ -21,7 +21,7 @@ export default function UploadZone({ onUpload, uploading, progress }) {
     <div
       {...getRootProps()}
       className={`rounded-lg border border-dashed p-6 text-center cursor-pointer transition-colors
-        ${isDragActive ? "border-neutral-500 bg-neutral-900" : "border-border hover:border-neutral-700"}
+        ${isDragActive ? "border-accent bg-neutral-900" : "border-border hover:border-accent/50"}
         ${uploading ? "cursor-wait" : ""}`}
     >
       <input {...getInputProps()} />

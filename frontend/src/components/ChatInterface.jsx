@@ -95,7 +95,7 @@ export default function ChatInterface({ activeDoc, messages, onAsk, loading }) {
       <form onSubmit={submit} className="p-4 shrink-0 border-t border-border">
         <div
           className={`flex items-center gap-2 rounded-xl border bg-surface pl-4 pr-1.5 py-1.5 transition-colors
-            ${activeDoc ? "border-border focus-within:border-neutral-600" : "border-border opacity-50"}`}
+            ${activeDoc ? "border-border focus-within:border-accent" : "border-border opacity-50"}`}
         >
           <input
             type="text"

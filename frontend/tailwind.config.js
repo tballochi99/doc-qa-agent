@@ -10,10 +10,14 @@ export default {
         mono: ["Geist Mono", "ui-monospace", "monospace"],
       },
       colors: {
-        // Vercel-style monochrome scale: pure black base, hairline borders.
+        // Pure-black base, green hairline borders and accent.
         bg: "#000000",
         surface: "#0a0a0a",
-        border: "#1f1f1f",
+        border: "rgba(62, 207, 142, 0.22)",
+        accent: {
+          DEFAULT: "#3ECF8E",
+          dim: "rgba(62, 207, 142, 0.5)",
+        },
       },
       keyframes: {
         "fade-up": {

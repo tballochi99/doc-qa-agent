@@ -135,7 +135,7 @@ export default function App() {
                       className={`group flex items-center justify-between gap-2 rounded-md px-2.5 py-2 cursor-pointer text-sm transition-colors border
                         ${
                           active
-                            ? "bg-neutral-900 border-neutral-700 text-white"
+                            ? "bg-neutral-900 border-accent/40 text-white"
                             : "border-transparent text-neutral-400 hover:bg-neutral-900/60 hover:text-neutral-200"
                         }`}
                     >
@@ -163,7 +163,7 @@ export default function App() {
             )}
           </div>
 
-          <p className="text-[10px] font-mono text-neutral-700 pt-3 border-t border-border">
+          <p className="text-[10px] font-mono text-accent pt-3 border-t border-border">
             built by Timoté Ballochi
           </p>
         </aside>
