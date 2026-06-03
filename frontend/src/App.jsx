@@ -76,12 +76,13 @@ export default function App() {
     setShowSources(false);
   };
 
-  const handleAsk = async (question) => {
+  // Ask a question on top of `base` turns (the conversation prefix kept
+  // as context). `base` is the prior turns; the new question is appended.
+  const submitQuestion = async (question, base) => {
     setError("");
     setAsking(true);
-    // Snapshot the prior turns as conversation history for the backend.
-    const history = messages.map((m) => ({ role: m.role, content: m.content }));
-    setMessages((prev) => [...prev, { role: "user", content: question }]);
+    const history = base.map((m) => ({ role: m.role, content: m.content }));
+    setMessages([...base, { role: "user", content: question }]);
     try {
       const res = await askQuestion(question, activeId, history);
       setMessages((prev) => [...prev, { role: "assistant", content: res.answer }]);
@@ -94,6 +95,12 @@ export default function App() {
       setAsking(false);
     }
   };
+
+  const handleAsk = (question) => submitQuestion(question, messages);
+
+  // Editing a question re-asks it: drop that turn and everything after,
+  // then resubmit the edited text with the preceding turns as context.
+  const handleEdit = (index, newText) => submitQuestion(newText, messages.slice(0, index));
 
   return (
     <div className="flex flex-col h-screen bg-bg text-neutral-200">
@@ -165,9 +172,10 @@ export default function App() {
             )}
           </div>
 
-          <p className="text-[10px] font-mono text-accent pt-3 border-t border-border">
-            built by Timoté Ballochi
-          </p>
+          <blockquote className="text-[10px] font-mono text-accent pt-3 border-t border-border leading-relaxed">
+            “You can’t make a Tomlette without breaking some Greggs.”
+            <span className="block text-neutral-600 mt-1">— Tom Wambsgans</span>
+          </blockquote>
         </aside>
 
         {/* ZONE 2 — Chat */}
@@ -176,6 +184,7 @@ export default function App() {
             activeDoc={activeDoc}
             messages={messages}
             onAsk={handleAsk}
+            onEdit={handleEdit}
             loading={asking}
           />
         </main>

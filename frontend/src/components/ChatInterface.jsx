@@ -1,31 +1,139 @@
 import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
-import { ArrowUpIcon } from "./Icons.jsx";
+import { ArrowUpIcon, CopyIcon, CheckIcon, PencilIcon } from "./Icons.jsx";
 
-function Message({ message }) {
-  const isUser = message.role === "user";
+function RoleLabel({ children }) {
   return (
-    <div className={`flex flex-col gap-1.5 animate-fade-up ${isUser ? "items-end" : "items-start"}`}>
-      <span className="text-[11px] font-mono text-neutral-600 px-1">
-        {isUser ? "you" : "greg"}
-      </span>
-      <div
-        className={`max-w-[80%] rounded-xl px-4 py-2.5 text-sm leading-relaxed
-          ${
-            isUser
-              ? "bg-white text-black"
-              : "border border-border bg-surface text-neutral-200"
-          }`}
-      >
-        {isUser ? (
-          message.content
-        ) : (
-          <div className="prose prose-sm prose-invert prose-agent max-w-none prose-p:my-1.5 prose-headings:text-white">
-            <ReactMarkdown>{message.content}</ReactMarkdown>
+    <span className="text-[11px] font-mono text-neutral-600 px-1">{children}</span>
+  );
+}
+
+function UserMessage({ message, index, onEdit, disabled }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(message.content);
+
+  const cancel = () => {
+    setEditing(false);
+    setDraft(message.content);
+  };
+  const save = () => {
+    const value = draft.trim();
+    if (!value) return;
+    setEditing(false);
+    onEdit(index, value);
+  };
+
+  if (editing) {
+    return (
+      <div className="flex flex-col items-end gap-1.5 animate-fade-up">
+        <RoleLabel>you</RoleLabel>
+        <div className="w-[80%] rounded-xl border border-accent bg-surface p-2.5">
+          <textarea
+            autoFocus
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                save();
+              } else if (e.key === "Escape") {
+                cancel();
+              }
+            }}
+            rows={Math.min(6, draft.split("\n").length + 1)}
+            className="w-full bg-transparent text-sm text-neutral-100 resize-none focus:outline-none"
+          />
+          <div className="flex justify-end gap-2 mt-2">
+            <button
+              onClick={cancel}
+              className="text-xs text-neutral-400 hover:text-white px-2 py-1 transition"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={save}
+              className="text-xs bg-white text-black rounded-md px-3 py-1 hover:bg-neutral-200 transition"
+            >
+              Send
+            </button>
           </div>
-        )}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="group flex flex-col items-end gap-1.5 animate-fade-up">
+      <RoleLabel>you</RoleLabel>
+      <div className="max-w-[80%] rounded-xl px-4 py-2.5 text-sm leading-relaxed bg-white text-black">
+        {message.content}
+      </div>
+      <div className="flex justify-end px-1 h-4">
+        <button
+          onClick={() => {
+            setDraft(message.content);
+            setEditing(true);
+          }}
+          disabled={disabled}
+          className="opacity-0 group-hover:opacity-100 transition text-neutral-600 hover:text-white disabled:opacity-0"
+          aria-label="Edit message"
+          title="Edit"
+        >
+          <PencilIcon size={13} />
+        </button>
       </div>
     </div>
+  );
+}
+
+function AgentMessage({ message }) {
+  const [copied, setCopied] = useState(false);
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(message.content);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      /* clipboard unavailable */
+    }
+  };
+
+  return (
+    <div className="group flex flex-col items-start gap-1.5 animate-fade-up">
+      <RoleLabel>greg</RoleLabel>
+      <div className="max-w-[80%] rounded-xl px-4 py-2.5 text-sm leading-relaxed border border-border bg-surface text-neutral-200">
+        <div className="prose prose-sm prose-invert prose-agent max-w-none prose-p:my-1.5 prose-headings:text-white">
+          <ReactMarkdown>{message.content}</ReactMarkdown>
+        </div>
+      </div>
+      <div className="flex justify-start px-1 h-4">
+        <button
+          onClick={copy}
+          className="opacity-0 group-hover:opacity-100 transition inline-flex items-center gap-1 text-[11px] font-mono text-neutral-600 hover:text-white"
+          aria-label="Copy answer"
+          title="Copy"
+        >
+          {copied ? (
+            <>
+              <CheckIcon size={12} className="text-accent" /> copied
+            </>
+          ) : (
+            <>
+              <CopyIcon size={12} /> copy
+            </>
+          )}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function Message({ message, index, onEdit, disabled }) {
+  return message.role === "user" ? (
+    <UserMessage message={message} index={index} onEdit={onEdit} disabled={disabled} />
+  ) : (
+    <AgentMessage message={message} />
   );
 }
 
@@ -52,7 +160,7 @@ function EmptyState({ activeDoc }) {
   );
 }
 
-export default function ChatInterface({ activeDoc, messages, onAsk, loading }) {
+export default function ChatInterface({ activeDoc, messages, onAsk, onEdit, loading }) {
   const [input, setInput] = useState("");
   const bottomRef = useRef(null);
 
@@ -74,12 +182,14 @@ export default function ChatInterface({ activeDoc, messages, onAsk, loading }) {
         {!activeDoc || messages.length === 0 ? (
           <EmptyState activeDoc={activeDoc} />
         ) : (
-          messages.map((m, i) => <Message key={i} message={m} />)
+          messages.map((m, i) => (
+            <Message key={i} message={m} index={i} onEdit={onEdit} disabled={loading} />
+          ))
         )}
 
         {loading && (
           <div className="flex flex-col gap-1.5 items-start animate-fade-up">
-            <span className="text-[11px] font-mono text-neutral-600 px-1">greg</span>
+            <RoleLabel>greg</RoleLabel>
             <div className="border border-border bg-surface rounded-xl px-4 py-3.5">
               <div className="flex gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-neutral-500 animate-bounce [animation-delay:-0.3s]" />
