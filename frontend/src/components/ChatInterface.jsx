@@ -153,7 +153,7 @@ function Message({ message, index, onEdit, disabled }) {
   );
 }
 
-function EmptyState({ activeDoc }) {
+function EmptyState({ activeDoc, onTrySample }) {
   return (
     <div className="h-full flex flex-col items-center justify-center text-center px-6">
       {activeDoc ? (
@@ -166,17 +166,23 @@ function EmptyState({ activeDoc }) {
         </>
       ) : (
         <>
-          <p className="text-sm text-neutral-300">No document selected</p>
-          <p className="text-xs text-neutral-600 mt-1.5">
-            Upload a PDF on the left to start.
+          <p className="text-sm text-neutral-300">No document yet</p>
+          <p className="text-xs text-neutral-600 mt-1.5 max-w-xs leading-relaxed">
+            Upload a PDF to get started, or try a sample to see Greg in action.
           </p>
+          <button
+            onClick={onTrySample}
+            className="mt-4 text-xs font-mono text-black bg-white rounded-md px-3 py-1.5 hover:bg-neutral-200 transition"
+          >
+            Try a sample PDF
+          </button>
         </>
       )}
     </div>
   );
 }
 
-export default function ChatInterface({ activeDoc, messages, onAsk, onEdit, loading }) {
+export default function ChatInterface({ activeDoc, messages, onAsk, onEdit, onTrySample, loading }) {
   const [input, setInput] = useState("");
   const bottomRef = useRef(null);
 
@@ -196,7 +202,7 @@ export default function ChatInterface({ activeDoc, messages, onAsk, onEdit, load
     <div className="flex flex-col h-full">
       <div className="scroll-area flex-1 overflow-y-auto p-5 space-y-5">
         {!activeDoc || messages.length === 0 ? (
-          <EmptyState activeDoc={activeDoc} />
+          <EmptyState activeDoc={activeDoc} onTrySample={onTrySample} />
         ) : (
           messages.map((m, i) => (
             <Message key={i} message={m} index={i} onEdit={onEdit} disabled={loading} />

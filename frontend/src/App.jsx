@@ -93,6 +93,25 @@ export default function App() {
     }
   };
 
+  // Load the bundled sample PDF so visitors can try Greg without a file
+  // of their own. Served from the frontend origin (public/), then run
+  // through the normal upload flow.
+  const handleTrySample = async () => {
+    if (uploading) return;
+    setError("");
+    try {
+      const res = await fetch("/sample.pdf");
+      if (!res.ok) throw new Error("fetch failed");
+      const blob = await res.blob();
+      const file = new File([blob], "greg-cafe-handbook.pdf", {
+        type: "application/pdf",
+      });
+      await handleUpload(file);
+    } catch {
+      setError("Couldn't load the sample PDF.");
+    }
+  };
+
   const handleSelect = (id) => {
     setActiveId(id);
     setMessages([]);
@@ -221,6 +240,14 @@ export default function App() {
 
           <UploadZone onUpload={handleUpload} uploading={uploading} progress={progress} />
 
+          <button
+            onClick={handleTrySample}
+            disabled={uploading}
+            className="-mt-3 text-[11px] font-mono text-neutral-500 hover:text-accent transition disabled:opacity-40 self-start"
+          >
+            or try a sample PDF →
+          </button>
+
           <div className="flex-1">
             <h2 className="hidden md:block text-[11px] font-mono uppercase tracking-widest text-neutral-600 mb-3">
               Documents · {documents.length}
@@ -279,6 +306,7 @@ export default function App() {
             messages={messages}
             onAsk={handleAsk}
             onEdit={handleEdit}
+            onTrySample={handleTrySample}
             loading={asking}
           />
         </main>
