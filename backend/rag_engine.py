@@ -174,19 +174,25 @@ def _condense_question(question: str, history: list[dict]) -> str:
         return question
 
 
-def ask_question(
+NO_CONTEXT_MSG = (
+    "I couldn't find any relevant content in this document to answer your question."
+)
+
+
+def _build_context(
     question: str,
     document_id: str,
-    history: list[dict] | None = None,
-    n_results: int = 5,
-) -> dict:
-    """Retrieve the most relevant chunks and generate a grounded answer.
+    history: list[dict] | None,
+    n_results: int,
+) -> tuple[list[dict], list[dict] | None]:
+    """Retrieve sources and build the chat messages.
 
     History-aware: follow-up turns are condensed into a standalone query
-    for retrieval, and the recent conversation is given to the LLM so it
-    can resolve references ("in French?", "summarize that"…).
+    for retrieval, and the recent conversation is included so the LLM can
+    resolve references ("in French?", "summarize that"…).
 
-    Returns the answer plus the source passages (text, page, score).
+    Returns (sources, messages). `messages` is None when no relevant
+    context was found.
     """
     collection = _get_collection()
     history = _normalize_history(history)
@@ -212,10 +218,7 @@ def ask_question(
         context_blocks.append(f"[Page {page}]\n{text}")
 
     if not context_blocks:
-        return {
-            "answer": "I couldn't find any relevant content in this document to answer your question.",
-            "sources": [],
-        }
+        return [], None
 
     context = "\n\n---\n\n".join(context_blocks)
     user_prompt = (
@@ -228,6 +231,22 @@ def ask_question(
     messages = [{"role": "system", "content": SYSTEM_PROMPT}]
     messages.extend(history)
     messages.append({"role": "user", "content": user_prompt})
+    return sources, messages
+
+
+def ask_question(
+    question: str,
+    document_id: str,
+    history: list[dict] | None = None,
+    n_results: int = 5,
+) -> dict:
+    """Retrieve relevant chunks and generate a grounded answer (non-streaming).
+
+    Returns the answer plus the source passages (text, page, score).
+    """
+    sources, messages = _build_context(question, document_id, history, n_results)
+    if messages is None:
+        return {"answer": NO_CONTEXT_MSG, "sources": []}
 
     client = _get_groq()
     try:
@@ -238,9 +257,46 @@ def ask_question(
         )
     except RateLimitError as exc:
         raise QuotaExceededError(_retry_after_seconds(exc)) from exc
-    answer = completion.choices[0].message.content
 
-    return {"answer": answer, "sources": sources}
+    return {"answer": completion.choices[0].message.content, "sources": sources}
+
+
+def ask_question_stream(
+    question: str,
+    document_id: str,
+    history: list[dict] | None = None,
+    n_results: int = 5,
+):
+    """Stream the answer as events.
+
+    Yields dicts: {"type": "sources", ...}, then {"type": "delta", "text": ...}
+    chunks, then {"type": "done"}. Raises QuotaExceededError before emitting
+    anything if the quota is already exhausted.
+    """
+    sources, messages = _build_context(question, document_id, history, n_results)
+    if messages is None:
+        yield {"type": "sources", "sources": []}
+        yield {"type": "delta", "text": NO_CONTEXT_MSG}
+        yield {"type": "done"}
+        return
+
+    client = _get_groq()
+    try:
+        stream = client.chat.completions.create(
+            model=GROQ_MODEL,
+            messages=messages,
+            temperature=0.2,
+            stream=True,
+        )
+    except RateLimitError as exc:
+        raise QuotaExceededError(_retry_after_seconds(exc)) from exc
+
+    yield {"type": "sources", "sources": sources}
+    for chunk in stream:
+        delta = chunk.choices[0].delta.content if chunk.choices else None
+        if delta:
+            yield {"type": "delta", "text": delta}
+    yield {"type": "done"}
 
 
 def delete_document(document_id: str) -> None:

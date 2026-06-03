@@ -17,6 +17,7 @@ load_dotenv()
 
 from fastapi import Depends, FastAPI, File, Header, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 import rag_engine
@@ -161,6 +162,49 @@ def ask(req: AskRequest, session: str = Depends(_session)) -> dict:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     except Exception as exc:  # pragma: no cover - defensive
         raise HTTPException(status_code=500, detail=f"Failed to answer question: {exc}") from exc
+
+
+@app.post("/api/ask/stream")
+def ask_stream(req: AskRequest, session: str = Depends(_session)) -> StreamingResponse:
+    """Same as /api/ask but streams the answer token-by-token over SSE.
+
+    Event stream (each line `data: {json}`): a `sources` event, then many
+    `delta` events with `text`, then `done`. Quota/other failures are sent
+    as an `error` event so a partially-rendered answer can recover.
+    """
+    if not req.question.strip():
+        raise HTTPException(status_code=400, detail="Question cannot be empty.")
+
+    registry = _load_registry()
+    doc = registry.get(req.document_id)
+    if not doc or doc.get("session_id") != session:
+        raise HTTPException(status_code=404, detail="Document not found.")
+
+    history = [turn.model_dump() for turn in req.history]
+
+    def event_stream():
+        try:
+            for event in rag_engine.ask_question_stream(
+                req.question, req.document_id, history
+            ):
+                yield f"data: {json.dumps(event)}\n\n"
+        except rag_engine.QuotaExceededError as exc:
+            payload = {
+                "type": "error",
+                "code": "quota_exceeded",
+                "retry_after_seconds": exc.retry_after,
+            }
+            yield f"data: {json.dumps(payload)}\n\n"
+        except RuntimeError as exc:  # missing/invalid Groq key
+            yield f"data: {json.dumps({'type': 'error', 'message': str(exc)})}\n\n"
+        except Exception as exc:  # pragma: no cover - defensive
+            yield f"data: {json.dumps({'type': 'error', 'message': f'Failed to answer question: {exc}'})}\n\n"
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 @app.get("/api/documents")
