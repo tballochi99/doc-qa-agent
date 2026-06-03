@@ -15,7 +15,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, File, Header, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -55,6 +55,13 @@ def _save_registry(registry: dict) -> None:
     REGISTRY_PATH.write_text(json.dumps(registry, indent=2))
 
 
+# Each visitor sends an opaque session id (header). Documents are scoped to
+# it so users only ever see, query and delete their own uploads — without
+# any accounts. Falls back to "anonymous" if the header is absent.
+def _session(x_session_id: str = Header(default="anonymous", alias="X-Session-Id")) -> str:
+    return x_session_id or "anonymous"
+
+
 class Turn(BaseModel):
     role: str
     content: str
@@ -72,7 +79,7 @@ def health() -> dict:
 
 
 @app.post("/api/upload")
-async def upload(file: UploadFile = File(...)) -> dict:
+async def upload(file: UploadFile = File(...), session: str = Depends(_session)) -> dict:
     """Accept a PDF, extract + chunk + embed it, store in ChromaDB."""
     filename = file.filename or "document.pdf"
     if not filename.lower().endswith(".pdf"):
@@ -103,6 +110,7 @@ async def upload(file: UploadFile = File(...)) -> dict:
             "filename": filename,
             "pages": result["pages"],
             "chunks_count": result["chunks_count"],
+            "session_id": session,
         }
         _save_registry(registry)
 
@@ -121,13 +129,14 @@ async def upload(file: UploadFile = File(...)) -> dict:
 
 
 @app.post("/api/ask")
-def ask(req: AskRequest) -> dict:
+def ask(req: AskRequest, session: str = Depends(_session)) -> dict:
     """Answer a question against a previously indexed document."""
     if not req.question.strip():
         raise HTTPException(status_code=400, detail="Question cannot be empty.")
 
     registry = _load_registry()
-    if req.document_id not in registry:
+    doc = registry.get(req.document_id)
+    if not doc or doc.get("session_id") != session:
         raise HTTPException(status_code=404, detail="Document not found.")
 
     try:
@@ -155,20 +164,22 @@ def ask(req: AskRequest) -> dict:
 
 
 @app.get("/api/documents")
-def list_documents() -> list[dict]:
-    """List all indexed documents."""
+def list_documents(session: str = Depends(_session)) -> list[dict]:
+    """List the documents indexed by this session."""
     registry = _load_registry()
     return [
         {"id": d["id"], "filename": d["filename"], "pages": d["pages"]}
         for d in registry.values()
+        if d.get("session_id") == session
     ]
 
 
 @app.delete("/api/documents/{document_id}")
-def delete_document(document_id: str) -> dict:
+def delete_document(document_id: str, session: str = Depends(_session)) -> dict:
     """Remove a document and its chunks from ChromaDB."""
     registry = _load_registry()
-    if document_id not in registry:
+    doc = registry.get(document_id)
+    if not doc or doc.get("session_id") != session:
         raise HTTPException(status_code=404, detail="Document not found.")
 
     try:
