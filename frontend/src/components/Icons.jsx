@@ -75,6 +75,16 @@ export function AlertIcon({ size = 16, className = "" }) {
   );
 }
 
+export function MenuIcon({ size = 16, className = "" }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" {...base} className={className}>
+      <path d="M3 6h18" />
+      <path d="M3 12h18" />
+      <path d="M3 18h18" />
+    </svg>
+  );
+}
+
 export function CopyIcon({ size = 16, className = "" }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" {...base} className={className}>
