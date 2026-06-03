@@ -10,6 +10,10 @@ export default function Header() {
         </span>
         <span className="text-neutral-700">/</span>
         <span className="text-sm text-neutral-400">Greg</span>
+        <span className="text-neutral-700 hidden sm:inline">·</span>
+        <span className="text-xs text-neutral-600 hidden sm:inline">
+          your personal agent
+        </span>
       </div>
 
       <div className="flex items-center gap-3 text-xs font-mono text-accent">
