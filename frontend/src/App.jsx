@@ -71,7 +71,12 @@ export default function App() {
       setShowSources(false);
       setSidebarOpen(false);
     } catch (err) {
-      setError(err.response?.data?.detail || "Upload failed.");
+      const data = err.response?.data?.detail;
+      if (err.response?.status === 429) {
+        setError("Too many uploads from your connection — please wait a bit and try again.");
+      } else {
+        setError((typeof data === "string" && data) || "Upload failed.");
+      }
     } finally {
       setUploading(false);
       setProgress(0);
@@ -161,7 +166,13 @@ export default function App() {
     } catch (err) {
       const data = err.response?.data?.detail;
       let detail;
-      if (err.response?.status === 429 || data?.code === "quota_exceeded") {
+      if (data?.code === "rate_limited") {
+        const when = formatWait(data.retry_after_seconds);
+        detail =
+          data.scope === "day"
+            ? `**Easy, tiger.** You've reached today's question limit for this free demo. Come back ${when}.`
+            : `**Slow down a touch.** You're asking faster than the free demo allows — try again ${when}.`;
+      } else if (err.response?.status === 429 || data?.code === "quota_exceeded") {
         detail =
           "**Greg stepped out for a latte.**\n\n" +
           "He's run dry on free tokens for the moment — this is a free, shared demo " +
