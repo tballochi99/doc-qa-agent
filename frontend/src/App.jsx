@@ -11,6 +11,17 @@ import {
   deleteDocument,
 } from "./api.js";
 
+// Human-friendly "come back in …" from a reset delay in seconds.
+function formatWait(secs) {
+  if (!secs || secs <= 0) return "in a little while";
+  if (secs >= 3600) {
+    const h = Math.round(secs / 3600);
+    return `in about ${h} hour${h > 1 ? "s" : ""}`;
+  }
+  const m = Math.max(1, Math.round(secs / 60));
+  return `in about ${m} minute${m > 1 ? "s" : ""}`;
+}
+
 export default function App() {
   const [documents, setDocuments] = useState([]);
   const [activeId, setActiveId] = useState(null);
@@ -89,7 +100,18 @@ export default function App() {
       setSources(res.sources || []);
       if (res.sources?.length) setShowSources(true);
     } catch (err) {
-      const detail = err.response?.data?.detail || "Failed to get an answer.";
+      const data = err.response?.data?.detail;
+      let detail;
+      if (err.response?.status === 429 || data?.code === "quota_exceeded") {
+        detail =
+          "**Greg stepped out for a latte.**\n\n" +
+          "He's run dry on free tokens for the moment — this is a free, shared demo " +
+          `running on a single Greg key. He'll be back ${formatWait(
+            data?.retry_after_seconds
+          )}, once the quota refills (and the espresso machine cools down).`;
+      } else {
+        detail = (typeof data === "string" && data) || "Failed to get an answer.";
+      }
       setMessages((prev) => [...prev, { role: "assistant", content: detail }]);
     } finally {
       setAsking(false);
