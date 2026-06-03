@@ -8,6 +8,16 @@ function RoleLabel({ children }) {
   );
 }
 
+function TypingDots() {
+  return (
+    <div className="flex gap-1.5 py-1">
+      <span className="w-1.5 h-1.5 rounded-full bg-neutral-500 animate-bounce [animation-delay:-0.3s]" />
+      <span className="w-1.5 h-1.5 rounded-full bg-neutral-500 animate-bounce [animation-delay:-0.15s]" />
+      <span className="w-1.5 h-1.5 rounded-full bg-neutral-500 animate-bounce" />
+    </div>
+  );
+}
+
 function UserMessage({ message, index, onEdit, disabled }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(message.content);
@@ -103,28 +113,34 @@ function AgentMessage({ message }) {
     <div className="group flex flex-col items-start gap-1.5 animate-fade-up">
       <RoleLabel>greg</RoleLabel>
       <div className="max-w-[80%] rounded-xl px-4 py-2.5 text-sm leading-relaxed border border-border bg-surface text-neutral-200">
-        <div className="prose prose-sm prose-invert prose-agent max-w-none prose-p:my-1.5 prose-headings:text-white">
-          <ReactMarkdown>{message.content}</ReactMarkdown>
+        {message.content === "" ? (
+          <TypingDots />
+        ) : (
+          <div className="prose prose-sm prose-invert prose-agent max-w-none prose-p:my-1.5 prose-headings:text-white">
+            <ReactMarkdown>{message.content}</ReactMarkdown>
+          </div>
+        )}
+      </div>
+      {message.content !== "" && (
+        <div className="flex justify-start px-1 h-4">
+          <button
+            onClick={copy}
+            className="opacity-0 group-hover:opacity-100 transition inline-flex items-center gap-1 text-[11px] font-mono text-neutral-600 hover:text-white"
+            aria-label="Copy answer"
+            title="Copy"
+          >
+            {copied ? (
+              <>
+                <CheckIcon size={12} className="text-accent" /> copied
+              </>
+            ) : (
+              <>
+                <CopyIcon size={12} /> copy
+              </>
+            )}
+          </button>
         </div>
-      </div>
-      <div className="flex justify-start px-1 h-4">
-        <button
-          onClick={copy}
-          className="opacity-0 group-hover:opacity-100 transition inline-flex items-center gap-1 text-[11px] font-mono text-neutral-600 hover:text-white"
-          aria-label="Copy answer"
-          title="Copy"
-        >
-          {copied ? (
-            <>
-              <CheckIcon size={12} className="text-accent" /> copied
-            </>
-          ) : (
-            <>
-              <CopyIcon size={12} /> copy
-            </>
-          )}
-        </button>
-      </div>
+      )}
     </div>
   );
 }
@@ -185,19 +201,6 @@ export default function ChatInterface({ activeDoc, messages, onAsk, onEdit, load
           messages.map((m, i) => (
             <Message key={i} message={m} index={i} onEdit={onEdit} disabled={loading} />
           ))
-        )}
-
-        {loading && (
-          <div className="flex flex-col gap-1.5 items-start animate-fade-up">
-            <RoleLabel>greg</RoleLabel>
-            <div className="border border-border bg-surface rounded-xl px-4 py-3.5">
-              <div className="flex gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-neutral-500 animate-bounce [animation-delay:-0.3s]" />
-                <span className="w-1.5 h-1.5 rounded-full bg-neutral-500 animate-bounce [animation-delay:-0.15s]" />
-                <span className="w-1.5 h-1.5 rounded-full bg-neutral-500 animate-bounce" />
-              </div>
-            </div>
-          </div>
         )}
         <div ref={bottomRef} />
       </div>

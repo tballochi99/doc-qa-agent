@@ -6,7 +6,7 @@ import SourceCard from "./components/SourceCard.jsx";
 import { FileIcon, TrashIcon, CloseIcon, AlertIcon } from "./components/Icons.jsx";
 import {
   uploadDocument,
-  askQuestion,
+  askQuestionStream,
   listDocuments,
   deleteDocument,
 } from "./api.js";
@@ -103,19 +103,42 @@ export default function App() {
 
   // Ask a question on top of `base` turns (the conversation prefix kept
   // as context). `base` is the prior turns; the new question is appended.
+  // Append text to the last (assistant) message — used while streaming.
+  const appendToLast = (text) =>
+    setMessages((prev) => {
+      const copy = [...prev];
+      const last = copy[copy.length - 1];
+      copy[copy.length - 1] = { ...last, content: last.content + text };
+      return copy;
+    });
+  const setLast = (content) =>
+    setMessages((prev) => {
+      const copy = [...prev];
+      copy[copy.length - 1] = { ...copy[copy.length - 1], content };
+      return copy;
+    });
+
   const submitQuestion = async (question, base) => {
     setError("");
     setAsking(true);
     const history = base.map((m) => ({ role: m.role, content: m.content }));
-    setMessages([...base, { role: "user", content: question }]);
+    // Add the user turn plus an empty assistant turn that fills in as the
+    // tokens stream in (the empty bubble shows the typing indicator).
+    setMessages([
+      ...base,
+      { role: "user", content: question },
+      { role: "assistant", content: "" },
+    ]);
     try {
-      const res = await askQuestion(question, activeId, history);
-      setMessages((prev) => [...prev, { role: "assistant", content: res.answer }]);
-      setSources(res.sources || []);
-      // On desktop the panel slides in beside the chat; on mobile we leave
-      // it collapsed behind the header "Sources" button to avoid covering
-      // the answer the moment it arrives.
-      if (res.sources?.length && isDesktop) setShowSources(true);
+      await askQuestionStream(question, activeId, history, {
+        onSources: (s) => {
+          setSources(s);
+          // Desktop: slide the panel in. Mobile: leave it behind the header
+          // "Sources" button so it doesn't cover the answer.
+          if (s.length && isDesktop) setShowSources(true);
+        },
+        onDelta: (text) => appendToLast(text),
+      });
     } catch (err) {
       const data = err.response?.data?.detail;
       let detail;
@@ -129,7 +152,7 @@ export default function App() {
       } else {
         detail = (typeof data === "string" && data) || "Failed to get an answer.";
       }
-      setMessages((prev) => [...prev, { role: "assistant", content: detail }]);
+      setLast(detail);
     } finally {
       setAsking(false);
     }
