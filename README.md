@@ -109,6 +109,9 @@ All backend configuration lives in `backend/.env` (see `.env.example`):
 | `GROQ_MODEL` | `llama-3.3-70b-versatile` | Groq model |
 | `EMBEDDING_MODEL` | `paraphrase-multilingual-MiniLM-L12-v2` | Sentence-Transformers model (multilingual) |
 | `ALLOWED_ORIGINS` | `http://localhost:3000` | CORS allowed origins |
+| `RATE_LIMIT_ASK_PER_MINUTE` | `12` | Per-IP question limit / minute |
+| `RATE_LIMIT_ASK_PER_DAY` | `200` | Per-IP question limit / day |
+| `RATE_LIMIT_UPLOAD_PER_HOUR` | `20` | Per-IP upload limit / hour |
 
 ## Use Cases
 

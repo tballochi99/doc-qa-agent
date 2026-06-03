@@ -15,12 +15,13 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from fastapi import Depends, FastAPI, File, Header, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, File, Header, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 import rag_engine
+import ratelimit
 
 MAX_FILE_SIZE_MB = int(os.getenv("MAX_FILE_SIZE_MB", "10"))
 MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024
@@ -63,6 +64,30 @@ def _session(x_session_id: str = Header(default="anonymous", alias="X-Session-Id
     return x_session_id or "anonymous"
 
 
+def _client_ip(request: Request) -> str:
+    """Real client IP, honoring X-Forwarded-For behind a reverse proxy."""
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
+def _rate_limit(retry_scope: tuple[int, str] | None) -> None:
+    """Raise a 429 with a structured body if a limiter returned a hit."""
+    if retry_scope is None:
+        return
+    retry_after, scope = retry_scope
+    raise HTTPException(
+        status_code=429,
+        detail={
+            "code": "rate_limited",
+            "scope": scope,
+            "retry_after_seconds": retry_after,
+        },
+        headers={"Retry-After": str(retry_after)},
+    )
+
+
 class Turn(BaseModel):
     role: str
     content: str
@@ -80,8 +105,14 @@ def health() -> dict:
 
 
 @app.post("/api/upload")
-async def upload(file: UploadFile = File(...), session: str = Depends(_session)) -> dict:
+async def upload(
+    request: Request,
+    file: UploadFile = File(...),
+    session: str = Depends(_session),
+) -> dict:
     """Accept a PDF, extract + chunk + embed it, store in ChromaDB."""
+    _rate_limit(ratelimit.hit_upload(_client_ip(request)))
+
     filename = file.filename or "document.pdf"
     if not filename.lower().endswith(".pdf"):
         raise HTTPException(
@@ -130,8 +161,10 @@ async def upload(file: UploadFile = File(...), session: str = Depends(_session))
 
 
 @app.post("/api/ask")
-def ask(req: AskRequest, session: str = Depends(_session)) -> dict:
+def ask(req: AskRequest, request: Request, session: str = Depends(_session)) -> dict:
     """Answer a question against a previously indexed document."""
+    _rate_limit(ratelimit.hit_ask(_client_ip(request)))
+
     if not req.question.strip():
         raise HTTPException(status_code=400, detail="Question cannot be empty.")
 
@@ -165,13 +198,17 @@ def ask(req: AskRequest, session: str = Depends(_session)) -> dict:
 
 
 @app.post("/api/ask/stream")
-def ask_stream(req: AskRequest, session: str = Depends(_session)) -> StreamingResponse:
+def ask_stream(
+    req: AskRequest, request: Request, session: str = Depends(_session)
+) -> StreamingResponse:
     """Same as /api/ask but streams the answer token-by-token over SSE.
 
     Event stream (each line `data: {json}`): a `sources` event, then many
     `delta` events with `text`, then `done`. Quota/other failures are sent
     as an `error` event so a partially-rendered answer can recover.
     """
+    _rate_limit(ratelimit.hit_ask(_client_ip(request)))
+
     if not req.question.strip():
         raise HTTPException(status_code=400, detail="Question cannot be empty.")
 
