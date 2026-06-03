@@ -10,7 +10,7 @@ exact source passages and their page numbers.
 
 ## Demo
 
-> _Screenshot of the interface — sidebar upload, chat, and the source panel._
+![Greg — Document Q&A Agent: chat answer with cited source passages](docs/demo.png)
 
 ## How it works
 
