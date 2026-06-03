@@ -2,14 +2,59 @@
 from __future__ import annotations
 
 import os
+import re
 from functools import lru_cache
 
 import chromadb
 from chromadb.config import Settings
 from chromadb.utils import embedding_functions
-from groq import Groq
+from groq import Groq, RateLimitError
 
 from doc_processor import chunk_document
+
+
+class QuotaExceededError(Exception):
+    """Raised when the shared Groq free-tier quota is temporarily exhausted.
+
+    `retry_after` is the number of seconds until the quota resets, when the
+    Groq API tells us (None if unknown).
+    """
+
+    def __init__(self, retry_after: float | None):
+        self.retry_after = retry_after
+        super().__init__("Groq free-tier quota reached.")
+
+
+def _parse_duration(value: str | None) -> float | None:
+    """Parse Groq duration strings like '2m59.56s', '1h30m', '7.66s'."""
+    if not value:
+        return None
+    total = 0.0
+    matched = False
+    for amount, unit in re.findall(r"(\d+(?:\.\d+)?)\s*(h|m|s|ms)", value):
+        matched = True
+        n = float(amount)
+        total += {"h": 3600, "m": 60, "s": 1, "ms": 0.001}[unit] * n
+    if matched:
+        return total
+    try:
+        return float(value)
+    except ValueError:
+        return None
+
+
+def _retry_after_seconds(exc: RateLimitError) -> float | None:
+    """Best-effort extraction of the reset delay from a Groq 429 response."""
+    headers = getattr(getattr(exc, "response", None), "headers", {}) or {}
+    for key in (
+        "retry-after",
+        "x-ratelimit-reset-tokens",
+        "x-ratelimit-reset-requests",
+    ):
+        secs = _parse_duration(headers.get(key))
+        if secs is not None:
+            return secs
+    return None
 
 CHROMA_PERSIST_PATH = os.getenv("CHROMA_PERSIST_PATH", "./chroma_db")
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "paraphrase-multilingual-MiniLM-L12-v2")
@@ -185,11 +230,14 @@ def ask_question(
     messages.append({"role": "user", "content": user_prompt})
 
     client = _get_groq()
-    completion = client.chat.completions.create(
-        model=GROQ_MODEL,
-        messages=messages,
-        temperature=0.2,
-    )
+    try:
+        completion = client.chat.completions.create(
+            model=GROQ_MODEL,
+            messages=messages,
+            temperature=0.2,
+        )
+    except RateLimitError as exc:
+        raise QuotaExceededError(_retry_after_seconds(exc)) from exc
     answer = completion.choices[0].message.content
 
     return {"answer": answer, "sources": sources}

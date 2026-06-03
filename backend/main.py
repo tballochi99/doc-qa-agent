@@ -133,6 +133,20 @@ def ask(req: AskRequest) -> dict:
     try:
         history = [turn.model_dump() for turn in req.history]
         return rag_engine.ask_question(req.question, req.document_id, history)
+    except rag_engine.QuotaExceededError as exc:
+        # Shared free-tier quota temporarily exhausted. Tell the client when
+        # it resets so it can show a friendly "come back later" message.
+        headers = {}
+        if exc.retry_after:
+            headers["Retry-After"] = str(int(exc.retry_after))
+        raise HTTPException(
+            status_code=429,
+            detail={
+                "code": "quota_exceeded",
+                "retry_after_seconds": exc.retry_after,
+            },
+            headers=headers,
+        ) from exc
     except RuntimeError as exc:
         # Missing/invalid Groq API key.
         raise HTTPException(status_code=503, detail=str(exc)) from exc
