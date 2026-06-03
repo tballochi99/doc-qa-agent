@@ -124,5 +124,4 @@ All backend configuration lives in `backend/.env` (see `.env.example`):
 
 ## Author
 
-Timoté Ballochi
-GitHub: <https://github.com/tballochi99>
+Timoté Ballochi — <https://github.com/tballochi99>
