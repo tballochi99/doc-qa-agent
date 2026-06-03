@@ -1,4 +1,4 @@
-# Greg — Document Q&A Agent
+# Document Q&A Agent
 
 > Your personal document agent. Upload a PDF, ask in plain language, and get
 > answers grounded in the exact source passages — powered by RAG.
