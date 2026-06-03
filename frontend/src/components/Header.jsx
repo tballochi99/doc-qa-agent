@@ -6,10 +6,10 @@ export default function Header() {
       <div className="flex items-center gap-2.5">
         <Mark size={16} className="text-accent" />
         <span className="text-sm font-medium tracking-tight text-white">
-          Document Q&amp;A
+          Greg
         </span>
         <span className="text-neutral-700">/</span>
-        <span className="text-sm text-neutral-400">Greg</span>
+        <span className="text-sm text-neutral-400">Document Q&amp;A</span>
         <span className="text-neutral-700 hidden sm:inline">·</span>
         <span className="text-xs text-neutral-600 hidden sm:inline">
           your personal agent
